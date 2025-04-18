@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weighted Auction Game - Dark Mode</title>
+    <title>Auction</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -61,23 +61,38 @@
 
     <div class="container mx-auto max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-8">
 
-        <h1 class="text-3xl font-bold text-center text-gray-100 mb-8">Weighted Auction Game</h1>
+        <h1 class="text-3xl font-bold text-center text-gray-100 mb-8">Auction Game</h1>
 
-        <div id="landing-page" class="fade-in">
-            <div class="card">
-                <h2 class="text-xl font-semibold mb-4 text-gray-200">Game Setup</h2>
-                <form id="setup-form">
-                    <div class="mb-4">
-                        <label for="items" class="block text-sm font-medium text-gray-300 mb-1">Items for Auction (comma-separated):</label>
-                        <input type="text" id="items" name="items" class="input-field text-black" placeholder="e.g., Item A, Item B, Magic Wand" required style="color: black;">
-                    </div>
-                    <div class="mb-6">
-                        <label for="num-bidders" class="block text-sm font-medium text-gray-300 mb-1">Number of Bidders:</label>
-                        <input type="number" id="num-bidders" name="num-bidders" class="input-field" min="2" max="8" placeholder="2-8" required style="color: black;">
-                    </div>
-                    <button type="submit" class="btn w-full">Start Bidding Setup</button>
-                </form>
-            </div>
+        <div id="landing-page" class="fade-in flex flex-wrap -mx-4">
+             <div class="w-full md:w-1/2 px-4"> <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-200">Auction Setup</h2>
+                    <form id="setup-form">
+                        <div class="mb-4">
+                            <label for="items" class="block text-sm font-medium text-gray-300 mb-1">Items for Auction (comma-separated):</label>
+                            <input type="text" id="items" name="items" class="input-field text-black" placeholder="e.g., Item A, Item B, Magic Wand" required style="color: black;">
+                        </div>
+                        <div class="mb-6">
+                            <label for="num-bidders" class="block text-sm font-medium text-gray-300 mb-1">Number of Bidders:</label>
+                            <input type="number" id="num-bidders" name="num-bidders" class="input-field" min="2" max="8" placeholder="2-8" required style="color: black;">
+                        </div>
+                        <button type="submit" class="btn w-full">Start Bidding Setup</button>
+                    </form>
+                </div>
+             </div>
+
+             <div class="w-full md:w-1/2 px-4"> <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-200">Auction Rules</h2>
+                    <ul class="list-disc list-inside text-sm text-gray-300 space-y-2">
+                        <li>Set up with items and number of bidders.</li>
+                        <li>Bidders allocate 100 total points across items (normalized automatically).</li>
+                        <li>Items auctioned randomly, one by one.</li>
+                        <li>Win chance is proportional to your bid; winner pays the second-highest bid.</li>
+                        <li>Start with 100 budget. Unspent budget after each item is re-allocated to your bids on remaining items, based on original proportions.</li>
+                        <li>Win Limit: Exceed the average share of items, and you're eliminated.</li>
+                        <li>Auction ends when all items are sold or only one bidder remains.</li>
+                    </ul>
+                 </div>
+             </div>
         </div>
 
         <div id="bid-entry-page" class="hidden fade-in">
@@ -106,7 +121,7 @@
                                 <th>Items Won</th>
                                 <th>Total Paid</th>
                                 <th>Remaining Budget</th>
-                            </tr>
+                                <th>Status</th> </tr>
                         </thead>
                         <tbody id="summary-body">
                             </tbody>
@@ -121,7 +136,7 @@
             </div>
 
             <div class="mt-8 text-center">
-                <button id="restart-button" class="btn bg-indigo-600 hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800">Start New Game</button>
+                <button id="restart-button" class="btn bg-indigo-600 hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800">Start New Auction</button>
             </div>
         </div>
 
@@ -147,7 +162,7 @@
         const submitBidButton = document.getElementById('submit-bid-button');
         const bidTotalMessage = document.getElementById('bid-total-message');
         const runAuctionControls = document.getElementById('run-auction-controls');
-        const runAuctionButton = document.getElementById('run-auction-button');
+        const runAuctionButton = documentgetElementById('run-auction-button');
         const summaryBody = document.getElementById('summary-body');
         const replayLog = document.getElementById('replay-log');
         const restartButton = document.getElementById('restart-button');
@@ -155,12 +170,14 @@
         const messageText = document.getElementById('message-text');
         const closeMessageBoxButton = document.getElementById('close-message-box');
 
-        // --- Game State ---
+        // --- Auction State ---
         let items = [];
         let numBidders = 0;
-        let biddersData = []; // Structure: [{ bidderId: 1, bids: [], budget: 100, itemsWon: [], totalPaid: 0 }, ...]
+        let biddersData = []; // Structure: [{ bidderId: 1, originalBids: [], activeBids: [], budget: 100, itemsWon: [], totalPaid: 0, status: 'active' }, ...]
         let currentBidderIndex = 0;
         let auctionLog = [];
+        let maxItemsPerBidder = 0; // New state variable for the winning limit
+        let itemOrder = []; // Store the shuffled item order
 
         // --- Utility Functions ---
         function showPage(pageElement) {
@@ -191,24 +208,26 @@
             return array;
         }
 
-        // Normalize bids to sum to 100
+        // Normalize bids to sum to 100 and round to nearest integer
         function normalizeBids(bids) {
             const sum = bids.reduce((acc, bid) => acc + bid, 0);
             if (sum === 0) {
                 const equalValue = Math.floor(100 / bids.length);
                 const remainder = 100 % bids.length;
                 const normalized = bids.map((_, i) => equalValue + (i < remainder ? 1 : 0));
-                // Use showMessage for warnings - styling handled by message box CSS
                 showMessage(`Warning: Bids summed to 0. They have been normalized to equal values summing to 100.`);
                 return normalized;
             }
             if (sum === 100) return bids;
 
             const scaleFactor = 100 / sum;
-            let normalizedBids = bids.map(bid => Math.round(bid * scaleFactor));
+            let normalizedBids = bids.map(bid => Math.round(bid * scaleFactor)); // Round to nearest integer
             let currentSum = normalizedBids.reduce((acc, bid) => acc + bid, 0);
             let diff = 100 - currentSum;
+
+            // Adjust for rounding errors to ensure sum is exactly 100
             const bidsWithIndices = normalizedBids.map((bid, index) => ({ bid, index }));
+            // Sort by bid value to distribute difference among highest bids first
             bidsWithIndices.sort((a, b) => b.bid - a.bid);
 
             for (let i = 0; diff !== 0; i++) {
@@ -217,13 +236,13 @@
                     normalizedBids[indexToAdjust]++;
                     diff--;
                 } else {
-                    if (normalizedBids[indexToAdjust] > 0) {
+                    if (normalizedBids[indexToAdjust] > 0) { // Only decrement if bid is > 0
                         normalizedBids[indexToAdjust]--;
                         diff++;
                     }
                 }
             }
-            showMessage(`Warning: Your bids summed to ${sum}. They have been automatically normalized to sum to 100.`);
+            showMessage(`Warning: Your bids summed to ${sum}. They have been automatically normalized and rounded to sum to 100.`);
             return normalizedBids;
         }
 
@@ -283,6 +302,75 @@
             }
         }
 
+        // Re-allocate remaining budget proportionally to bids on remaining items
+        function reallocateBudget(bidder, currentRoundIndex) {
+            if (bidder.status !== 'active' || bidder.budget <= 0) {
+                // No reallocation for eliminated bidders or those with no budget
+                return;
+            }
+
+            const remainingItemIndices = itemOrder.slice(currentRoundIndex + 1); // Indices of items not yet auctioned
+            if (remainingItemIndices.length === 0) {
+                // No items left to re-allocate bids to
+                return;
+            }
+
+            // Calculate the sum of the bidder's ORIGINAL bids for the remaining items
+            let totalOriginalBidOnRemainingItems = 0;
+            remainingItemIndices.forEach(itemIndex => {
+                totalOriginalBidOnRemainingItems += bidder.originalBids[itemIndex];
+            });
+
+            if (totalOriginalBidOnRemainingItems <= 0) {
+                 // Cannot re-allocate if original bids on remaining items are zero
+                 // Set active bids for remaining items to 0
+                 remainingItemIndices.forEach(itemIndex => {
+                     bidder.activeBids[itemIndex] = 0;
+                 });
+                return;
+            }
+
+            const reallocationFactor = bidder.budget / totalOriginalBidOnRemainingItems;
+            let newActiveBidsSum = 0;
+            let newActiveBids = new Array(items.length).fill(0); // Array to build new active bids
+
+            // Calculate new active bids for remaining items
+            remainingItemIndices.forEach(itemIndex => {
+                const newBid = Math.round(bidder.originalBids[itemIndex] * reallocationFactor);
+                newActiveBids[itemIndex] = newBid;
+                newActiveBidsSum += newBid;
+            });
+
+            // Adjust for rounding errors to ensure new active bids sum exactly to remaining budget
+            let diff = bidder.budget - newActiveBidsSum;
+             const bidsWithIndices = newActiveBids.map((bid, index) => ({ bid, index }));
+             // Filter to only include remaining items for adjustment
+             const remainingBidsWithIndices = bidsWithIndices.filter((_, index) => remainingItemIndices.includes(index));
+
+             // Sort remaining bids by value to distribute difference
+             remainingBidsWithIndices.sort((a, b) => b.bid - a.bid);
+
+             for (let i = 0; diff !== 0 && i < remainingBidsWithIndices.length * 2; i++) { // Limit iterations to prevent infinite loops
+                 const indexToAdjust = remainingBidsWithIndices[i % remainingBidsWithIndices.length].index;
+                 if (diff > 0) {
+                     newActiveBids[indexToAdjust]++;
+                     diff--;
+                 } else {
+                     if (newActiveBids[indexToAdjust] > 0) {
+                         newActiveBids[indexToAdjust]--;
+                         diff++;
+                     }
+                 }
+             }
+
+            // Update the bidder's active bids with the newly calculated values for remaining items
+            // Bids for items already auctioned remain 0
+            bidder.activeBids = newActiveBids;
+
+             // Optional: Log the reallocation for debugging/replay clarity
+             console.log(`Bidder ${bidder.bidderId}: Reallocated budget ${bidder.budget}. New active bids for remaining items:`, remainingItemIndices.map(idx => `${items[idx]}: ${bidder.activeBids[idx]}`).join(', '));
+        }
+
 
         // --- Event Listeners ---
         setupForm.addEventListener('submit', (e) => {
@@ -306,14 +394,22 @@
             }
             numBidders = biddersRaw;
 
+            // Calculate max items a bidder can win: ceil(n/m)
+            maxItemsPerBidder = Math.ceil(items.length / numBidders);
+            // Ensure minimum limit is reasonable, e.g., at least 1 if there are items
+            if (items.length > 0 && maxItemsPerBidder < 1) maxItemsPerBidder = 1;
+
+
             biddersData = [];
             for (let i = 1; i <= numBidders; i++) {
                 biddersData.push({
                     bidderId: i,
-                    bids: new Array(items.length).fill(0),
+                    originalBids: [], // Store original bids
+                    activeBids: [], // Store bids used in current/future rounds (reallocated)
                     budget: 100,
                     itemsWon: [],
-                    totalPaid: 0
+                    totalPaid: 0,
+                    status: 'active' // Add status for elimination
                 });
             }
 
@@ -335,10 +431,13 @@
 
             inputs.forEach(input => {
                 const bidValue = parseInt(input.value, 10);
-                if (isNaN(bidValue) || bidValue < 0) {
+                 if (isNaN(bidValue) || bidValue < 0) {
                     isValid = false;
+                     // If input is empty, treat as 0 for normalization, but still check for invalid non-empty input
+                     currentBids.push(isNaN(bidValue) ? 0 : bidValue);
+                } else {
+                     currentBids.push(bidValue);
                 }
-                currentBids.push(isNaN(bidValue) || bidValue < 0 ? 0 : bidValue);
             });
 
             if (!isValid) {
@@ -348,9 +447,10 @@
                 return;
             }
 
-            // Normalize bids upon submission
+            // Normalize bids upon submission and store as original and active bids
             const normalizedBids = normalizeBids(currentBids);
-            currentBidder.bids = normalizedBids;
+            currentBidder.originalBids = [...normalizedBids]; // Store a copy
+            currentBidder.activeBids = [...normalizedBids]; // Initial active bids are the normalized bids
 
             form.classList.add('hidden');
             currentBidderIndex++;
@@ -366,6 +466,7 @@
         });
 
         runAuctionButton.addEventListener('click', () => {
+            itemOrder = shuffleArray([...items.keys()]); // Shuffle item order before auction starts
             runAuction();
             displayResults();
             showPage(resultsPage);
@@ -377,6 +478,8 @@
             biddersData = [];
             currentBidderIndex = 0;
             auctionLog = [];
+            maxItemsPerBidder = 0;
+            itemOrder = [];
             itemsInput.value = '';
             numBiddersInput.value = '';
             bidderFormsContainer.innerHTML = '';
@@ -414,8 +517,7 @@
                 formHTML += `
                     <div class="mb-3">
                         <label for="bid-${bidder.bidderId}-${index}" class="block text-sm font-medium text-gray-300">${item}:</label>
-                        <input type="number" id="bid-${bidder.bidderId}-${index}" name="bid-${index}" class="input-field bid-input" min="0" value="0" required data-bidder-id="${bidder.bidderId}" style="color: black;">
-                    </div>
+                        <input type="number" id="bid-${bidder.bidderId}-${index}" name="bid-${index}" class="input-field bid-input" min="0" required data-bidder-id="${bidder.bidderId}" style="color: black;"> </div>
                 `;
             });
 
@@ -433,25 +535,34 @@
 
         function runAuction() {
             auctionLog = [];
-            const itemOrder = shuffleArray([...items.keys()]);
 
-            biddersData.forEach(bidder => {
-                bidder.itemsWon = [];
-                bidder.totalPaid = 0;
-                bidder.budget = 100; // Reset budget for each auction run
-            });
+            // Reset items won, total paid, and budget for all bidders at the start of a new auction run
+             biddersData.forEach(bidder => {
+                 bidder.itemsWon = [];
+                 bidder.totalPaid = 0;
+                 bidder.budget = 100; // Starting budget
+                 bidder.status = 'active'; // Reset status
+                 // Reset active bids to original bids for the new auction run
+                 bidder.activeBids = [...bidder.originalBids];
+             });
 
-            itemOrder.forEach((itemIndex, round) => {
+
+            // Loop through items in the shuffled order
+            itemOrder.forEach((itemIndex, roundIndex) => {
                 const currentItem = items[itemIndex];
-                const bidsForItem = biddersData.map(bidder => ({
-                    bidderId: bidder.bidderId,
-                    bid: bidder.bids[itemIndex] // Use the normalized bids
-                })).filter(b => b.bid > 0);
+
+                // Collect active bids for the current item from active bidders
+                const bidsForItem = biddersData
+                    .filter(bidder => bidder.status === 'active')
+                    .map(bidder => ({
+                        bidderId: bidder.bidderId,
+                        bid: bidder.activeBids[itemIndex] // Use active bids
+                    })).filter(b => b.bid > 0);
 
                 auctionLog.push({
-                    round: round + 1,
+                    round: roundIndex + 1,
                     item: currentItem,
-                    bids: bidsForItem.map(b => `Bidder ${b.bidderId}: ${b.bid}`).join(', ') || 'No positive bids',
+                    bids: bidsForItem.map(b => `Bidder ${b.bidderId}: ${b.bid}`).join(', ') || 'No positive bids from active bidders',
                     winner: null,
                     secondPrice: 0,
                     outcome: ''
@@ -459,14 +570,22 @@
                 const currentLogEntry = auctionLog[auctionLog.length - 1];
 
                 if (bidsForItem.length === 0) {
-                    currentLogEntry.outcome = "No positive bids received. Item remains unsold.";
-                    return;
+                    currentLogEntry.outcome = "No positive bids received from active bidders. Item remains unsold.";
+                     // After processing an item (sold or unsold), reallocate budget for ALL active bidders
+                     biddersData.forEach(bidder => {
+                         reallocateBudget(bidder, roundIndex);
+                     });
+                    return; // Move to next item
                 }
 
                 const winnerId = selectWinnerWeighted(bidsForItem);
                 if (winnerId === null) {
-                    currentLogEntry.outcome = "Error in weighted selection or no positive bids. Item remains unsold.";
-                    return;
+                    currentLogEntry.outcome = "Error in weighted selection or no positive bids from active bidders. Item remains unsold.";
+                     // After processing an item (sold or unsold), reallocate budget for ALL active bidders
+                     biddersData.forEach(bidder => {
+                         reallocateBudget(bidder, roundIndex);
+                     });
+                    return; // Move to next item
                 }
 
                 const winner = biddersData.find(b => b.bidderId === winnerId);
@@ -479,9 +598,27 @@
                     winner.totalPaid += secondPrice;
                     winner.itemsWon.push(currentItem);
                     currentLogEntry.outcome = `Bidder ${winnerId} wins ${currentItem} and pays the second price of ${secondPrice}. Budget remaining: ${winner.budget}.`;
+
+                    // Check winning limit after winning an item
+                    // Eliminate if the number of items won is equal to or greater than the limit
+                    if (winner.status === 'active' && winner.itemsWon.length >= maxItemsPerBidder) {
+                        winner.status = 'eliminated';
+                        currentLogEntry.outcome += ` Bidder ${winnerId} has reached the winning limit (${maxItemsPerBidder}) and is eliminated from future rounds.`;
+                         // When a bidder is eliminated, set their active bids for all remaining items to 0
+                         itemOrder.slice(roundIndex + 1).forEach(remainingItemIndex => {
+                             winner.activeBids[remainingItemIndex] = 0;
+                         });
+                    }
+
                 } else {
                     currentLogEntry.outcome = `Bidder ${winnerId} had the winning bid but cannot afford the second price of ${secondPrice} (Budget: ${winner.budget}). Item remains unsold.`;
                 }
+
+                 // After processing an item (sold or unsold), reallocate budget for ALL active bidders
+                 biddersData.forEach(bidder => {
+                     reallocateBudget(bidder, roundIndex);
+                 });
+
             });
         }
 
@@ -498,7 +635,10 @@
                     <td>${bidder.itemsWon.length > 0 ? bidder.itemsWon.join(', ') : 'None'}</td>
                     <td>${bidder.totalPaid}</td>
                     <td>${bidder.budget}</td>
-                `;
+                    <td>${bidder.status === 'active' ? 'Active' : 'Eliminated'}</td> `;
+                 if (bidder.status === 'eliminated') {
+                    row.classList.add('text-red-400'); // Highlight eliminated bidders
+                }
             });
 
             // Populate Replay Log
