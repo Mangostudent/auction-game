@@ -69,13 +69,11 @@
                 <form id="setup-form">
                     <div class="mb-4">
                         <label for="items" class="block text-sm font-medium text-gray-300 mb-1">Items for Auction (comma-separated):</label>
-                        <input type="text" id="items" name="items" class="input-field" placeholder="e.g., Item A, Item B, Magic Wand" required>
-                        <p class="text-xs text-gray-400 mt-1">Enter at least one item.</p>
+                        <input type="text" id="items" name="items" class="input-field text-black" placeholder="e.g., Item A, Item B, Magic Wand" required style="color: black;">
                     </div>
                     <div class="mb-6">
                         <label for="num-bidders" class="block text-sm font-medium text-gray-300 mb-1">Number of Bidders:</label>
-                        <input type="number" id="num-bidders" name="num-bidders" class="input-field" min="2" max="8" placeholder="2-8" required>
-                         <p class="text-xs text-gray-400 mt-1">Choose between 2 and 8 bidders.</p>
+                        <input type="number" id="num-bidders" name="num-bidders" class="input-field" min="2" max="8" placeholder="2-8" required style="color: black;">
                     </div>
                     <button type="submit" class="btn w-full">Start Bidding Setup</button>
                 </form>
@@ -86,12 +84,12 @@
             <div id="bidder-forms-container">
                 </div>
             <div id="bid-submission-controls" class="mt-6 flex justify-between items-center hidden">
-                 <p id="bid-total-message" class="text-sm text-red-400 font-medium"></p>
-                 <button id="submit-bid-button" class="btn">Submit Bids & Proceed</button>
+                <p id="bid-total-message" class="text-sm text-red-400 font-medium"></p>
+                <button id="submit-bid-button" class="btn">Submit Bids & Proceed</button>
             </div>
-             <div id="run-auction-controls" class="mt-6 text-center hidden">
-                 <p class="text-green-400 font-medium mb-4">All bids collected!</p>
-                 <button id="run-auction-button" class="btn">Run Auction & See Results</button>
+            <div id="run-auction-controls" class="mt-6 text-center hidden">
+                <p class="text-green-400 font-medium mb-4">All bids collected!</p>
+                <button id="run-auction-button" class="btn">Run Auction & See Results</button>
             </div>
         </div>
 
@@ -122,8 +120,8 @@
                     </div>
             </div>
 
-             <div class="mt-8 text-center">
-                 <button id="restart-button" class="btn bg-indigo-600 hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800">Start New Game</button>
+            <div class="mt-8 text-center">
+                <button id="restart-button" class="btn bg-indigo-600 hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800">Start New Game</button>
             </div>
         </div>
 
@@ -200,8 +198,8 @@
                 const equalValue = Math.floor(100 / bids.length);
                 const remainder = 100 % bids.length;
                 const normalized = bids.map((_, i) => equalValue + (i < remainder ? 1 : 0));
-                 // Use showMessage for warnings - styling handled by message box CSS
-                 showMessage(`Warning: Bids summed to 0. They have been normalized to equal values summing to 100.`);
+                // Use showMessage for warnings - styling handled by message box CSS
+                showMessage(`Warning: Bids summed to 0. They have been normalized to equal values summing to 100.`);
                 return normalized;
             }
             if (sum === 100) return bids;
@@ -214,18 +212,18 @@
             bidsWithIndices.sort((a, b) => b.bid - a.bid);
 
             for (let i = 0; diff !== 0; i++) {
-                 const indexToAdjust = bidsWithIndices[i % bidsWithIndices.length].index;
-                 if (diff > 0) {
-                     normalizedBids[indexToAdjust]++;
-                     diff--;
-                 } else {
-                     if (normalizedBids[indexToAdjust] > 0) {
-                         normalizedBids[indexToAdjust]--;
-                         diff++;
-                     }
-                 }
+                const indexToAdjust = bidsWithIndices[i % bidsWithIndices.length].index;
+                if (diff > 0) {
+                    normalizedBids[indexToAdjust]++;
+                    diff--;
+                } else {
+                    if (normalizedBids[indexToAdjust] > 0) {
+                        normalizedBids[indexToAdjust]--;
+                        diff++;
+                    }
+                }
             }
-             showMessage(`Warning: Your bids summed to ${sum}. They have been automatically normalized to sum to 100.`);
+            showMessage(`Warning: Your bids summed to ${sum}. They have been automatically normalized to sum to 100.`);
             return normalizedBids;
         }
 
@@ -252,6 +250,40 @@
             return sortedBids.length > 1 ? sortedBids[1] : 0;
         }
 
+        // Update bid total display and validation
+        function updateBidTotal(form) {
+            const inputs = form.querySelectorAll('.bid-input');
+            let currentSum = 0;
+            let hasInvalidInput = false;
+
+            inputs.forEach(input => {
+                const bidValue = parseInt(input.value, 10);
+                if (isNaN(bidValue) || bidValue < 0) {
+                    hasInvalidInput = true;
+                }
+                currentSum += isNaN(bidValue) || bidValue < 0 ? 0 : bidValue;
+            });
+
+            const totalSpan = form.querySelector(`#total-${form.id.split('-')[2]}`);
+            if (totalSpan) {
+                totalSpan.textContent = currentSum;
+
+                if (hasInvalidInput) {
+                    bidTotalMessage.textContent = `Bidder ${form.id.split('-')[2]}: Please enter valid non-negative numbers for all bids.`;
+                    bidTotalMessage.classList.remove('text-green-400');
+                    bidTotalMessage.classList.add('text-red-400');
+                    submitBidButton.disabled = true; // Disable if any input is invalid
+                } else {
+                     // Message indicates current sum, button is enabled regardless of sum for normalization
+                    bidTotalMessage.textContent = `Bidder ${form.id.split('-')[2]}: Your bids currently sum to ${currentSum}. They will be normalized to 100 upon submission.`;
+                     bidTotalMessage.classList.remove('text-red-400');
+                    bidTotalMessage.classList.add('text-green-400'); // Use green for valid inputs, even if sum isn't 100 yet
+                    submitBidButton.disabled = false; // Enable if all inputs are valid numbers
+                }
+            }
+        }
+
+
         // --- Event Listeners ---
         setupForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -262,16 +294,16 @@
                 showMessage("Please enter at least one item.");
                 return;
             }
-             if (isNaN(biddersRaw) || biddersRaw < 2 || biddersRaw > 8) {
-                 showMessage("Please enter a number of bidders between 2 and 8.");
-                 return;
-             }
+            if (isNaN(biddersRaw) || biddersRaw < 2 || biddersRaw > 8) {
+                showMessage("Please enter a number of bidders between 2 and 8.");
+                return;
+            }
 
             items = itemsRaw.split(',').map(item => item.trim()).filter(item => item);
-             if (items.length === 0) {
-                 showMessage("Please enter valid item names.");
-                 return;
-             }
+            if (items.length === 0) {
+                showMessage("Please enter valid item names.");
+                return;
+            }
             numBidders = biddersRaw;
 
             biddersData = [];
@@ -299,8 +331,7 @@
             const form = document.getElementById(`bidder-form-${currentBidder.bidderId}`);
             const inputs = form.querySelectorAll('input[type="number"]');
             let currentBids = [];
-            let currentSum = 0;
-            let isValid = true;
+            let isValid = true; // Re-check validity on submit
 
             inputs.forEach(input => {
                 const bidValue = parseInt(input.value, 10);
@@ -308,16 +339,17 @@
                     isValid = false;
                 }
                 currentBids.push(isNaN(bidValue) || bidValue < 0 ? 0 : bidValue);
-                currentSum += isNaN(bidValue) || bidValue < 0 ? 0 : bidValue;
             });
 
             if (!isValid) {
-                showMessage(`Bidder ${currentBidder.bidderId}: Please enter valid non-negative numbers for all bids.`);
-                bidTotalMessage.textContent = ''; // Clear specific form message
+                 // This case should ideally be caught by updateBidTotal disabling the button,
+                 // but as a fallback:
+                showMessage(`Bidder ${currentBidder.bidderId}: Please ensure all bids are valid non-negative numbers before submitting.`);
                 return;
             }
 
-            const normalizedBids = normalizeBids(currentBids); // Normalization might show its own message
+            // Normalize bids upon submission
+            const normalizedBids = normalizeBids(currentBids);
             currentBidder.bids = normalizedBids;
 
             form.classList.add('hidden');
@@ -329,7 +361,7 @@
             } else {
                 bidSubmissionControls.classList.add('hidden');
                 runAuctionControls.classList.remove('hidden');
-                 bidTotalMessage.textContent = '';
+                bidTotalMessage.textContent = '';
             }
         });
 
@@ -354,17 +386,17 @@
             showPage(landingPage);
         });
 
-         closeMessageBoxButton.addEventListener('click', hideMessage);
+        closeMessageBoxButton.addEventListener('click', hideMessage);
 
         // --- Core Logic Functions ---
 
         function generateBidderForm(bidderIndex) {
-             let form = document.getElementById(`bidder-form-${bidderIndex + 1}`);
-             if (form) {
-                 form.classList.remove('hidden');
-                 updateBidTotal(form);
-                 return;
-             }
+            let form = document.getElementById(`bidder-form-${bidderIndex + 1}`);
+            if (form) {
+                form.classList.remove('hidden');
+                updateBidTotal(form);
+                return;
+            }
 
             const bidder = biddersData[bidderIndex];
             form = document.createElement('form');
@@ -375,20 +407,20 @@
 
             // Adjusted text colors for dark mode
             let formHTML = `<h3 class="text-lg font-semibold mb-4 text-blue-400">Bidder ${bidder.bidderId}, Enter Your Bids:</h3>`;
-            formHTML += `<p class="text-sm text-gray-300 mb-4">Your bids must sum to 100. They will be normalized if they don't.</p>`;
+            formHTML += `<p class="text-sm text-gray-300 mb-4">Enter your bids for each item. They will be automatically normalized to sum to 100 upon submission.</p>`; // Updated message
 
             items.forEach((item, index) => {
                 // Label text color adjusted
                 formHTML += `
                     <div class="mb-3">
                         <label for="bid-${bidder.bidderId}-${index}" class="block text-sm font-medium text-gray-300">${item}:</label>
-                        <input type="number" id="bid-${bidder.bidderId}-${index}" name="bid-${index}" class="input-field bid-input" min="0" value="0" required data-bidder-id="${bidder.bidderId}">
+                        <input type="number" id="bid-${bidder.bidderId}-${index}" name="bid-${index}" class="input-field bid-input" min="0" value="0" required data-bidder-id="${bidder.bidderId}" style="color: black;">
                     </div>
                 `;
             });
 
-             // Total text color adjusted
-             formHTML += `<div class="mt-4 text-right font-medium text-gray-300">Total: <span id="total-${bidder.bidderId}" class="text-blue-400">0</span> / 100</div>`;
+            // Total text color adjusted
+            formHTML += `<div class="mt-4 text-right font-medium text-gray-300">Current Total: <span id="total-${bidder.bidderId}" class="text-blue-400">0</span></div>`; // Updated text
 
             form.innerHTML = formHTML;
             bidderFormsContainer.appendChild(form);
@@ -396,56 +428,35 @@
             form.querySelectorAll('.bid-input').forEach(input => {
                 input.addEventListener('input', () => updateBidTotal(form));
             });
-             updateBidTotal(form);
+            updateBidTotal(form); // Initial update
         }
-
-         function updateBidTotal(form) {
-             const bidderId = form.id.split('-').pop();
-             const inputs = form.querySelectorAll('.bid-input');
-             let sum = 0;
-             inputs.forEach(input => {
-                 sum += parseInt(input.value, 10) || 0;
-             });
-             const totalSpan = form.querySelector(`#total-${bidderId}`);
-             totalSpan.textContent = sum;
-
-             // Adjust feedback colors for dark mode
-             if (sum === 100) {
-                 totalSpan.className = 'text-green-400 font-bold'; // Lighter green
-                  bidTotalMessage.textContent = '';
-             } else {
-                 totalSpan.className = 'text-red-400 font-bold'; // Lighter red
-                  bidTotalMessage.textContent = `Current sum is ${sum}. Bids will be normalized if not 100 upon submission.`;
-                  bidTotalMessage.className = 'text-sm text-red-400 font-medium'; // Ensure message uses light red
-             }
-         }
 
         function runAuction() {
             auctionLog = [];
             const itemOrder = shuffleArray([...items.keys()]);
 
             biddersData.forEach(bidder => {
-                 bidder.itemsWon = [];
-                 bidder.totalPaid = 0;
-                 bidder.budget = 100;
+                bidder.itemsWon = [];
+                bidder.totalPaid = 0;
+                bidder.budget = 100; // Reset budget for each auction run
             });
 
             itemOrder.forEach((itemIndex, round) => {
                 const currentItem = items[itemIndex];
                 const bidsForItem = biddersData.map(bidder => ({
                     bidderId: bidder.bidderId,
-                    bid: bidder.bids[itemIndex]
+                    bid: bidder.bids[itemIndex] // Use the normalized bids
                 })).filter(b => b.bid > 0);
 
-                 auctionLog.push({
-                     round: round + 1,
-                     item: currentItem,
-                     bids: bidsForItem.map(b => `Bidder ${b.bidderId}: ${b.bid}`).join(', ') || 'No positive bids',
-                     winner: null,
-                     secondPrice: 0,
-                     outcome: ''
-                 });
-                 const currentLogEntry = auctionLog[auctionLog.length - 1];
+                auctionLog.push({
+                    round: round + 1,
+                    item: currentItem,
+                    bids: bidsForItem.map(b => `Bidder ${b.bidderId}: ${b.bid}`).join(', ') || 'No positive bids',
+                    winner: null,
+                    secondPrice: 0,
+                    outcome: ''
+                });
+                const currentLogEntry = auctionLog[auctionLog.length - 1];
 
                 if (bidsForItem.length === 0) {
                     currentLogEntry.outcome = "No positive bids received. Item remains unsold.";
@@ -453,23 +464,23 @@
                 }
 
                 const winnerId = selectWinnerWeighted(bidsForItem);
-                 if (winnerId === null) {
-                     currentLogEntry.outcome = "Error in weighted selection or no positive bids. Item remains unsold.";
-                     return;
-                 }
+                if (winnerId === null) {
+                    currentLogEntry.outcome = "Error in weighted selection or no positive bids. Item remains unsold.";
+                    return;
+                }
 
                 const winner = biddersData.find(b => b.bidderId === winnerId);
                 const secondPrice = findSecondPrice(bidsForItem);
-                 currentLogEntry.winner = `Bidder ${winnerId}`;
-                 currentLogEntry.secondPrice = secondPrice;
+                currentLogEntry.winner = `Bidder ${winnerId}`;
+                currentLogEntry.secondPrice = secondPrice;
 
                 if (winner.budget >= secondPrice) {
                     winner.budget -= secondPrice;
                     winner.totalPaid += secondPrice;
                     winner.itemsWon.push(currentItem);
-                     currentLogEntry.outcome = `Bidder ${winnerId} wins ${currentItem} and pays the second price of ${secondPrice}. Budget remaining: ${winner.budget}.`;
+                    currentLogEntry.outcome = `Bidder ${winnerId} wins ${currentItem} and pays the second price of ${secondPrice}. Budget remaining: ${winner.budget}.`;
                 } else {
-                     currentLogEntry.outcome = `Bidder ${winnerId} had the winning bid but cannot afford the second price of ${secondPrice} (Budget: ${winner.budget}). Item remains unsold.`;
+                    currentLogEntry.outcome = `Bidder ${winnerId} had the winning bid but cannot afford the second price of ${secondPrice} (Budget: ${winner.budget}). Item remains unsold.`;
                 }
             });
         }
