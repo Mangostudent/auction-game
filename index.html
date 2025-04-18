@@ -162,7 +162,7 @@
         const submitBidButton = document.getElementById('submit-bid-button');
         const bidTotalMessage = document.getElementById('bid-total-message');
         const runAuctionControls = document.getElementById('run-auction-controls');
-        const runAuctionButton = documentgetElementById('run-auction-button');
+        const runAuctionButton = document.getElementById('run-auction-button');
         const summaryBody = document.getElementById('summary-body');
         const replayLog = document.getElementById('replay-log');
         const restartButton = document.getElementById('restart-button');
@@ -375,23 +375,29 @@
         // --- Event Listeners ---
         setupForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            console.log("Setup form submitted."); // Log 1
             const itemsRaw = itemsInput.value.trim();
             const biddersRaw = parseInt(numBiddersInput.value, 10);
 
             if (!itemsRaw) {
                 showMessage("Please enter at least one item.");
+                console.log("Validation failed: No items."); // Log 2a
                 return;
             }
             if (isNaN(biddersRaw) || biddersRaw < 2 || biddersRaw > 8) {
                 showMessage("Please enter a number of bidders between 2 and 8.");
+                console.log("Validation failed: Invalid number of bidders."); // Log 2b
                 return;
             }
 
             items = itemsRaw.split(',').map(item => item.trim()).filter(item => item);
             if (items.length === 0) {
                 showMessage("Please enter valid item names.");
+                console.log("Validation failed: Items array is empty after processing."); // Log 2c
                 return;
             }
+
+            console.log("Validation passed. Proceeding with setup."); // Log 3
             numBidders = biddersRaw;
 
             // Calculate max items a bidder can win: ceil(n/m)
@@ -415,11 +421,14 @@
 
             currentBidderIndex = 0;
             bidderFormsContainer.innerHTML = ''; // Clear previous forms before generating new ones
+            console.log("Generating bidder form for index:", currentBidderIndex); // Log 4
             generateBidderForm(currentBidderIndex);
+            console.log("Showing bid entry page."); // Log 5
             showPage(bidEntryPage);
             bidSubmissionControls.classList.remove('hidden');
             runAuctionControls.classList.add('hidden');
             bidTotalMessage.textContent = ''; // Clear message initially
+            console.log("Setup complete."); // Log 6
         });
 
         submitBidButton.addEventListener('click', () => {
