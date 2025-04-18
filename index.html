@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weighted Auction Game - Dark Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Apply Inter font globally */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for better visual appeal in dark mode */
+        .btn {
+            /* Adjusted button style for potentially better contrast/look in dark mode if needed */
+            @apply inline-block px-6 py-3 bg-blue-600 text-white font-medium text-sm leading-tight uppercase rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed;
+        }
+        .input-field {
+            /* Dark mode input styles */
+            @apply block w-full px-4 py-2 mt-1 text-base text-gray-100 bg-gray-600 bg-clip-padding border border-solid border-gray-500 rounded-lg transition ease-in-out focus:text-gray-100 focus:bg-gray-500 focus:border-blue-500 focus:outline-none placeholder-gray-400;
+        }
+        .card {
+            /* Dark mode card styles */
+            @apply bg-gray-700 p-6 rounded-xl shadow-lg mb-6;
+        }
+        /* Style for hiding/showing sections */
+        .hidden {
+            display: none;
+        }
+        /* Add some animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        /* Responsive table */
+        .table-container {
+             @apply overflow-x-auto rounded-lg border border-gray-600; /* Added border */
+        }
+        table {
+            @apply min-w-full divide-y divide-gray-600; /* Darker divider */
+        }
+        th, td {
+            @apply px-4 py-2 text-sm text-left text-gray-200; /* Lighter text */
+        }
+        th {
+            @apply bg-gray-600 font-semibold text-gray-300 uppercase tracking-wider; /* Darker header, lighter text */
+        }
+        tbody tr:nth-child(even) {
+            @apply bg-gray-750; /* Slightly different dark for even rows */
+        }
+        /* Define gray-750 if needed or use existing shades */
+        /* Tailwind doesn't have 750 by default, let's use 800 for main bg and 700 for cards */
+
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-800 to-gray-900 min-h-screen flex items-center justify-center p-4 text-gray-200">
+
+    <div class="container mx-auto max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-8">
+
+        <h1 class="text-3xl font-bold text-center text-gray-100 mb-8">Weighted Auction Game</h1>
+
+        <div id="landing-page" class="fade-in">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">Game Setup</h2>
+                <form id="setup-form">
+                    <div class="mb-4">
+                        <label for="items" class="block text-sm font-medium text-gray-300 mb-1">Items for Auction (comma-separated):</label>
+                        <input type="text" id="items" name="items" class="input-field" placeholder="e.g., Item A, Item B, Magic Wand" required>
+                        <p class="text-xs text-gray-400 mt-1">Enter at least one item.</p>
+                    </div>
+                    <div class="mb-6">
+                        <label for="num-bidders" class="block text-sm font-medium text-gray-300 mb-1">Number of Bidders:</label>
+                        <input type="number" id="num-bidders" name="num-bidders" class="input-field" min="2" max="8" placeholder="2-8" required>
+                         <p class="text-xs text-gray-400 mt-1">Choose between 2 and 8 bidders.</p>
+                    </div>
+                    <button type="submit" class="btn w-full">Start Bidding Setup</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="bid-entry-page" class="hidden fade-in">
+            <div id="bidder-forms-container">
+                </div>
+            <div id="bid-submission-controls" class="mt-6 flex justify-between items-center hidden">
+                 <p id="bid-total-message" class="text-sm text-red-400 font-medium"></p>
+                 <button id="submit-bid-button" class="btn">Submit Bids & Proceed</button>
+            </div>
+             <div id="run-auction-controls" class="mt-6 text-center hidden">
+                 <p class="text-green-400 font-medium mb-4">All bids collected!</p>
+                 <button id="run-auction-button" class="btn">Run Auction & See Results</button>
+            </div>
+        </div>
+
+        <div id="results-page" class="hidden fade-in">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-gray-100">Auction Results</h2>
+
+            <div class="card">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200">Summary</h3>
+                <div class="table-container">
+                    <table id="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Bidder</th>
+                                <th>Items Won</th>
+                                <th>Total Paid</th>
+                                <th>Remaining Budget</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="text-lg font-semibold mb-4 text-gray-200">Auction Replay</h3>
+                <div id="replay-log" class="space-y-3 max-h-96 overflow-y-auto p-4 bg-gray-800 rounded-lg border border-gray-600">
+                    </div>
+            </div>
+
+             <div class="mt-8 text-center">
+                 <button id="restart-button" class="btn bg-indigo-600 hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800">Start New Game</button>
+            </div>
+        </div>
+
+        <div id="message-box" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-700 p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                <p id="message-text" class="mb-4 text-gray-200"></p>
+                <button id="close-message-box" class="btn bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-800">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const landingPage = document.getElementById('landing-page');
+        const bidEntryPage = document.getElementById('bid-entry-page');
+        const resultsPage = document.getElementById('results-page');
+        const setupForm = document.getElementById('setup-form');
+        const itemsInput = document.getElementById('items');
+        const numBiddersInput = document.getElementById('num-bidders');
+        const bidderFormsContainer = document.getElementById('bidder-forms-container');
+        const bidSubmissionControls = document.getElementById('bid-submission-controls');
+        const submitBidButton = document.getElementById('submit-bid-button');
+        const bidTotalMessage = document.getElementById('bid-total-message');
+        const runAuctionControls = document.getElementById('run-auction-controls');
+        const runAuctionButton = document.getElementById('run-auction-button');
+        const summaryBody = document.getElementById('summary-body');
+        const replayLog = document.getElementById('replay-log');
+        const restartButton = document.getElementById('restart-button');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const closeMessageBoxButton = document.getElementById('close-message-box');
+
+        // --- Game State ---
+        let items = [];
+        let numBidders = 0;
+        let biddersData = []; // Structure: [{ bidderId: 1, bids: [], budget: 100, itemsWon: [], totalPaid: 0 }, ...]
+        let currentBidderIndex = 0;
+        let auctionLog = [];
+
+        // --- Utility Functions ---
+        function showPage(pageElement) {
+            landingPage.classList.add('hidden');
+            bidEntryPage.classList.add('hidden');
+            resultsPage.classList.add('hidden');
+            pageElement.classList.remove('hidden');
+        }
+
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+            // Ensure message box itself is styled for dark mode (done via HTML/CSS)
+        }
+
+        function hideMessage() {
+            messageBox.classList.add('hidden');
+        }
+
+        // Fisher-Yates (aka Knuth) Shuffle
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // Normalize bids to sum to 100
+        function normalizeBids(bids) {
+            const sum = bids.reduce((acc, bid) => acc + bid, 0);
+            if (sum === 0) {
+                const equalValue = Math.floor(100 / bids.length);
+                const remainder = 100 % bids.length;
+                const normalized = bids.map((_, i) => equalValue + (i < remainder ? 1 : 0));
+                 // Use showMessage for warnings - styling handled by message box CSS
+                 showMessage(`Warning: Bids summed to 0. They have been normalized to equal values summing to 100.`);
+                return normalized;
+            }
+            if (sum === 100) return bids;
+
+            const scaleFactor = 100 / sum;
+            let normalizedBids = bids.map(bid => Math.round(bid * scaleFactor));
+            let currentSum = normalizedBids.reduce((acc, bid) => acc + bid, 0);
+            let diff = 100 - currentSum;
+            const bidsWithIndices = normalizedBids.map((bid, index) => ({ bid, index }));
+            bidsWithIndices.sort((a, b) => b.bid - a.bid);
+
+            for (let i = 0; diff !== 0; i++) {
+                 const indexToAdjust = bidsWithIndices[i % bidsWithIndices.length].index;
+                 if (diff > 0) {
+                     normalizedBids[indexToAdjust]++;
+                     diff--;
+                 } else {
+                     if (normalizedBids[indexToAdjust] > 0) {
+                         normalizedBids[indexToAdjust]--;
+                         diff++;
+                     }
+                 }
+            }
+             showMessage(`Warning: Your bids summed to ${sum}. They have been automatically normalized to sum to 100.`);
+            return normalizedBids;
+        }
+
+        // Weighted random selection
+        function selectWinnerWeighted(bidsForItem) {
+            const totalWeight = bidsForItem.reduce((sum, bidder) => sum + bidder.bid, 0);
+            if (totalWeight <= 0) return null;
+            let randomNum = Math.random() * totalWeight;
+            let cumulativeWeight = 0;
+            for (const bidder of bidsForItem) {
+                cumulativeWeight += bidder.bid;
+                if (randomNum <= cumulativeWeight) {
+                    return bidder.bidderId;
+                }
+            }
+            return null;
+        }
+
+        // Find second highest bid
+        function findSecondPrice(bidsForItem) {
+            const validBids = bidsForItem.map(b => b.bid).filter(bid => bid > 0);
+            if (validBids.length < 2) return 0;
+            const sortedBids = [...new Set(validBids)].sort((a, b) => b - a);
+            return sortedBids.length > 1 ? sortedBids[1] : 0;
+        }
+
+        // --- Event Listeners ---
+        setupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const itemsRaw = itemsInput.value.trim();
+            const biddersRaw = parseInt(numBiddersInput.value, 10);
+
+            if (!itemsRaw) {
+                showMessage("Please enter at least one item.");
+                return;
+            }
+             if (isNaN(biddersRaw) || biddersRaw < 2 || biddersRaw > 8) {
+                 showMessage("Please enter a number of bidders between 2 and 8.");
+                 return;
+             }
+
+            items = itemsRaw.split(',').map(item => item.trim()).filter(item => item);
+             if (items.length === 0) {
+                 showMessage("Please enter valid item names.");
+                 return;
+             }
+            numBidders = biddersRaw;
+
+            biddersData = [];
+            for (let i = 1; i <= numBidders; i++) {
+                biddersData.push({
+                    bidderId: i,
+                    bids: new Array(items.length).fill(0),
+                    budget: 100,
+                    itemsWon: [],
+                    totalPaid: 0
+                });
+            }
+
+            currentBidderIndex = 0;
+            bidderFormsContainer.innerHTML = ''; // Clear previous forms before generating new ones
+            generateBidderForm(currentBidderIndex);
+            showPage(bidEntryPage);
+            bidSubmissionControls.classList.remove('hidden');
+            runAuctionControls.classList.add('hidden');
+            bidTotalMessage.textContent = ''; // Clear message initially
+        });
+
+        submitBidButton.addEventListener('click', () => {
+            const currentBidder = biddersData[currentBidderIndex];
+            const form = document.getElementById(`bidder-form-${currentBidder.bidderId}`);
+            const inputs = form.querySelectorAll('input[type="number"]');
+            let currentBids = [];
+            let currentSum = 0;
+            let isValid = true;
+
+            inputs.forEach(input => {
+                const bidValue = parseInt(input.value, 10);
+                if (isNaN(bidValue) || bidValue < 0) {
+                    isValid = false;
+                }
+                currentBids.push(isNaN(bidValue) || bidValue < 0 ? 0 : bidValue);
+                currentSum += isNaN(bidValue) || bidValue < 0 ? 0 : bidValue;
+            });
+
+            if (!isValid) {
+                showMessage(`Bidder ${currentBidder.bidderId}: Please enter valid non-negative numbers for all bids.`);
+                bidTotalMessage.textContent = ''; // Clear specific form message
+                return;
+            }
+
+            const normalizedBids = normalizeBids(currentBids); // Normalization might show its own message
+            currentBidder.bids = normalizedBids;
+
+            form.classList.add('hidden');
+            currentBidderIndex++;
+
+            if (currentBidderIndex < numBidders) {
+                generateBidderForm(currentBidderIndex);
+                bidTotalMessage.textContent = ''; // Clear message for next bidder
+            } else {
+                bidSubmissionControls.classList.add('hidden');
+                runAuctionControls.classList.remove('hidden');
+                 bidTotalMessage.textContent = '';
+            }
+        });
+
+        runAuctionButton.addEventListener('click', () => {
+            runAuction();
+            displayResults();
+            showPage(resultsPage);
+        });
+
+        restartButton.addEventListener('click', () => {
+            items = [];
+            numBidders = 0;
+            biddersData = [];
+            currentBidderIndex = 0;
+            auctionLog = [];
+            itemsInput.value = '';
+            numBiddersInput.value = '';
+            bidderFormsContainer.innerHTML = '';
+            summaryBody.innerHTML = '';
+            replayLog.innerHTML = '';
+            bidTotalMessage.textContent = '';
+            showPage(landingPage);
+        });
+
+         closeMessageBoxButton.addEventListener('click', hideMessage);
+
+        // --- Core Logic Functions ---
+
+        function generateBidderForm(bidderIndex) {
+             let form = document.getElementById(`bidder-form-${bidderIndex + 1}`);
+             if (form) {
+                 form.classList.remove('hidden');
+                 updateBidTotal(form);
+                 return;
+             }
+
+            const bidder = biddersData[bidderIndex];
+            form = document.createElement('form');
+            form.id = `bidder-form-${bidder.bidderId}`;
+            // Use card class which is now styled for dark mode
+            form.classList.add('card', 'fade-in');
+            form.addEventListener('submit', (e) => e.preventDefault());
+
+            // Adjusted text colors for dark mode
+            let formHTML = `<h3 class="text-lg font-semibold mb-4 text-blue-400">Bidder ${bidder.bidderId}, Enter Your Bids:</h3>`;
+            formHTML += `<p class="text-sm text-gray-300 mb-4">Your bids must sum to 100. They will be normalized if they don't.</p>`;
+
+            items.forEach((item, index) => {
+                // Label text color adjusted
+                formHTML += `
+                    <div class="mb-3">
+                        <label for="bid-${bidder.bidderId}-${index}" class="block text-sm font-medium text-gray-300">${item}:</label>
+                        <input type="number" id="bid-${bidder.bidderId}-${index}" name="bid-${index}" class="input-field bid-input" min="0" value="0" required data-bidder-id="${bidder.bidderId}">
+                    </div>
+                `;
+            });
+
+             // Total text color adjusted
+             formHTML += `<div class="mt-4 text-right font-medium text-gray-300">Total: <span id="total-${bidder.bidderId}" class="text-blue-400">0</span> / 100</div>`;
+
+            form.innerHTML = formHTML;
+            bidderFormsContainer.appendChild(form);
+
+            form.querySelectorAll('.bid-input').forEach(input => {
+                input.addEventListener('input', () => updateBidTotal(form));
+            });
+             updateBidTotal(form);
+        }
+
+         function updateBidTotal(form) {
+             const bidderId = form.id.split('-').pop();
+             const inputs = form.querySelectorAll('.bid-input');
+             let sum = 0;
+             inputs.forEach(input => {
+                 sum += parseInt(input.value, 10) || 0;
+             });
+             const totalSpan = form.querySelector(`#total-${bidderId}`);
+             totalSpan.textContent = sum;
+
+             // Adjust feedback colors for dark mode
+             if (sum === 100) {
+                 totalSpan.className = 'text-green-400 font-bold'; // Lighter green
+                  bidTotalMessage.textContent = '';
+             } else {
+                 totalSpan.className = 'text-red-400 font-bold'; // Lighter red
+                  bidTotalMessage.textContent = `Current sum is ${sum}. Bids will be normalized if not 100 upon submission.`;
+                  bidTotalMessage.className = 'text-sm text-red-400 font-medium'; // Ensure message uses light red
+             }
+         }
+
+        function runAuction() {
+            auctionLog = [];
+            const itemOrder = shuffleArray([...items.keys()]);
+
+            biddersData.forEach(bidder => {
+                 bidder.itemsWon = [];
+                 bidder.totalPaid = 0;
+                 bidder.budget = 100;
+            });
+
+            itemOrder.forEach((itemIndex, round) => {
+                const currentItem = items[itemIndex];
+                const bidsForItem = biddersData.map(bidder => ({
+                    bidderId: bidder.bidderId,
+                    bid: bidder.bids[itemIndex]
+                })).filter(b => b.bid > 0);
+
+                 auctionLog.push({
+                     round: round + 1,
+                     item: currentItem,
+                     bids: bidsForItem.map(b => `Bidder ${b.bidderId}: ${b.bid}`).join(', ') || 'No positive bids',
+                     winner: null,
+                     secondPrice: 0,
+                     outcome: ''
+                 });
+                 const currentLogEntry = auctionLog[auctionLog.length - 1];
+
+                if (bidsForItem.length === 0) {
+                    currentLogEntry.outcome = "No positive bids received. Item remains unsold.";
+                    return;
+                }
+
+                const winnerId = selectWinnerWeighted(bidsForItem);
+                 if (winnerId === null) {
+                     currentLogEntry.outcome = "Error in weighted selection or no positive bids. Item remains unsold.";
+                     return;
+                 }
+
+                const winner = biddersData.find(b => b.bidderId === winnerId);
+                const secondPrice = findSecondPrice(bidsForItem);
+                 currentLogEntry.winner = `Bidder ${winnerId}`;
+                 currentLogEntry.secondPrice = secondPrice;
+
+                if (winner.budget >= secondPrice) {
+                    winner.budget -= secondPrice;
+                    winner.totalPaid += secondPrice;
+                    winner.itemsWon.push(currentItem);
+                     currentLogEntry.outcome = `Bidder ${winnerId} wins ${currentItem} and pays the second price of ${secondPrice}. Budget remaining: ${winner.budget}.`;
+                } else {
+                     currentLogEntry.outcome = `Bidder ${winnerId} had the winning bid but cannot afford the second price of ${secondPrice} (Budget: ${winner.budget}). Item remains unsold.`;
+                }
+            });
+        }
+
+        function displayResults() {
+            summaryBody.innerHTML = '';
+            replayLog.innerHTML = '';
+
+            // Populate Summary Table (styles handled by CSS)
+            biddersData.forEach(bidder => {
+                const row = summaryBody.insertRow();
+                // Use font-medium for bidder ID for slight emphasis
+                row.innerHTML = `
+                    <td class="font-medium text-gray-100">${bidder.bidderId}</td>
+                    <td>${bidder.itemsWon.length > 0 ? bidder.itemsWon.join(', ') : 'None'}</td>
+                    <td>${bidder.totalPaid}</td>
+                    <td>${bidder.budget}</td>
+                `;
+            });
+
+            // Populate Replay Log
+            auctionLog.forEach(entry => {
+                const div = document.createElement('div');
+                // Adjusted replay entry styles for dark mode
+                div.classList.add('p-3', 'bg-gray-700', 'rounded-md', 'shadow-sm', 'border', 'border-gray-600');
+                div.innerHTML = `
+                    <p class="font-semibold text-sm text-indigo-400">Round ${entry.round}: Item "${entry.item}"</p>
+                    <p class="text-xs text-gray-400 mt-1">Bids: ${entry.bids}</p>
+                    <p class="text-xs text-gray-300 mt-1">Winner: ${entry.winner || 'None'}</p>
+                    <p class="text-xs text-gray-300 mt-1">Paid (2nd Price): ${entry.secondPrice}</p>
+                    <p class="text-xs text-gray-100 mt-1">Outcome: ${entry.outcome}</p>
+                `;
+                replayLog.appendChild(div);
+            });
+        }
+
+        // --- Initial Setup ---
+        showPage(landingPage);
+
+    </script>
+
+</body>
+</html>
